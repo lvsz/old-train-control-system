@@ -5,15 +5,15 @@
          "gui/gui.rkt")
 
 (define border 30)
-(define infrabel-command (new infrabel-command%))
+;(define infrabel-command (new infrabel-command%))
 
-(define (main (input "input.txt"))
+(define (main (input "setup_loop.txt"))
   (read-railway input)
-  (window-init
-    (+ (get-railway-width) border)
-    (+ (get-railway-height) border)
-    infrabel-command)
-  (draw-window))
+  (run-nmbs)
+  (make-object window%
+               (+ (get-railway-width) border)
+               (+ (get-railway-height) border))
+  (void))
 
 (main)
 

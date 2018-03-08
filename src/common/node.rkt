@@ -2,10 +2,21 @@
 
 (provide node%
          switch%
-         detection-block%
+         node-pair
+         fst-node
+         snd-node
+         switch-nodes
          distance-between-nodes
          nodes-slope
          connect-nodes!)
+
+(define node-pair cons)
+(define fst-node car)
+(define snd-node cdr)
+(define (switch-nodes pair)
+  (let ((n1 (fst-node pair))
+        (n2 (snd-node pair)))
+    (node-pair n2 n1)))
 
 (define node%
   (class point%
@@ -14,11 +25,16 @@
 
     (define/public (get-id) id)
 
-    (define connected '())
-    (define/public (get-connected)
-      (map car connected))
-    (define/public (add-connected node distance)
-      (set! connected (cons (cons node distance) connected)))
+    (define adjacent '())
+    (define/public (get-adjacent)
+      (map car adjacent))
+    (define/public (add-adjacent node distance)
+      (set! adjacent (cons (cons node distance) adjacent)))
+    (define/public (get-distance node)
+      (let ((distance (assoc node adjacent)))
+        (if distance
+          (cdr distance)
+          #f)))
 
     (define switch #f)
     (define/public (switch?)
@@ -26,11 +42,13 @@
     (define/public (set-switch id)
       (set! switch id))
 
-    (define detection-block #f)
+    (define detection-blocks '())
     (define/public (detection-block?)
-      detection-block)
-    (define/public (set-detection-block id)
-      (set! detection-block id))))
+      (not (null? detection-blocks)))
+    (define/public (get-detection-blocks)
+      detection-blocks)
+    (define/public (add-detection-block id)
+      (set! detection-blocks (cons id detection-blocks)))))
 
 
 (define switch%
@@ -52,19 +70,21 @@
         (set! current-position route-2)
         (set! current-position route-1)))))
 
-
-(define detection-block%
-  (class object%
-    (super-make-object)
-    (init-field id node-1 node-2)
-
-    (define/public (get-id) id)
-
-    (define status 'green)
-    (define/public (get-status)
-      status)
-    (define/public (set-status new-status)
-      (set! status new-status))))
+; (define switch%
+;   (class object%
+;     (super-make-object)
+;     (init-field id switch-node route-1 route-2)
+;
+;     (define/public (get-id) id)
+;
+;     (define positions (vector route-1 route-2))
+;     (define current 0)
+;     (define/public (get-current-position)
+;       (send (vector-ref positions current) get-id))
+;     (define/public (get-alternative-position)
+;       (send (vector-ref positions (bitwise-and (+ current 1) 1)) get-id))
+;     (define/public (change-position)
+;       (set! current (bitwise-and (+ current 1) 1)))))
 
 
 (define (distance-between-nodes n1 n2)
@@ -77,8 +97,8 @@
 
 (define (connect-nodes! n1 n2)
   (let ((distance (distance-between-nodes n1 n2)))
-    (send n1 add-connected n2 distance)
-    (send n2 add-connected n1 distance)))
+    (send n1 add-adjacent n2 distance)
+    (send n2 add-adjacent n1 distance)))
 
 
 (define (nodes-slope n1 n2)
