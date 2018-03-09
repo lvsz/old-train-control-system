@@ -6,9 +6,15 @@
          fst-node
          snd-node
          switch-nodes
-         distance-between-nodes
+         track?
+         track-from
+         track-to
+         track-length
+         point-distance
          nodes-slope
          connect-nodes!)
+
+(struct track (from to length))
 
 (define node-pair cons)
 (define fst-node car)
@@ -21,23 +27,34 @@
 (define node%
   (class point%
     (super-new)
-    (init-field id)
+    (init-field id x y)
+    (send* this (set-x x)
+                (set-y y))
 
     (define/public (get-id) id)
 
     (define adjacent '())
     (define/public (get-adjacent)
-      (map car adjacent))
+      (map track-to adjacent))
     (define/public (add-adjacent node distance)
-      (set! adjacent (cons (cons node distance) adjacent)))
-    (define/public (get-distance node)
-      (let ((distance (assoc node adjacent)))
-        (if distance
-          (cdr distance)
-          #f)))
+      (set! adjacent (cons (track this node distance) adjacent)))
+    (define/public (get-track-length node)
+      (display "tracklength: ")
+      (display (send node get-id)) (display "::")
+      (displayln (get-adjacent))
+      (let loop ((ts adjacent))
+        (cond ((null? ts)
+               #f)
+              ((eq? node (track-to (car ts)))
+               (track-length (car ts)))
+              (else (loop (cdr ts))))))
+    (define/public (get-tracks)
+      adjacent)
+    (define/public (set-tracks tracks)
+      (set! adjacent tracks))
 
     (define switch #f)
-    (define/public (switch?)
+    (define/public (get-switch)
       switch)
     (define/public (set-switch id)
       (set! switch id))
@@ -50,44 +67,50 @@
     (define/public (add-detection-block id)
       (set! detection-blocks (cons id detection-blocks)))))
 
-
 (define switch%
   (class object%
-    (super-make-object)
-    (init-field id switch-node route-1 route-2)
+    (super-new)
+    (init-field id entry midpoint exit-1 exit-2)
 
     (define/public (get-id) id)
 
-    (define current-position route-1)
+    (define/public (get-entry-node)
+      entry)
+    (define current-position exit-1)
     (define/public (get-current-position)
-      (send current-position get-id))
+      current-position)
     (define/public (get-alternative-position)
-      (if (eq? current-position route-1)
-        (send route-2 get-id)
-        (send route-1 get-id)))
+      (if (eq? current-position exit-1)
+        exit-2
+        exit-1))
     (define/public (change-position)
-      (if (eq? current-position route-1)
-        (set! current-position route-2)
-        (set! current-position route-1)))))
+      (if (eq? current-position exit-1)
+        (set! current-position exit-2)
+        (set! current-position exit-1)))))
 
-; (define switch%
-;   (class object%
-;     (super-make-object)
-;     (init-field id switch-node route-1 route-2)
-;
-;     (define/public (get-id) id)
-;
-;     (define positions (vector route-1 route-2))
-;     (define current 0)
-;     (define/public (get-current-position)
-;       (send (vector-ref positions current) get-id))
-;     (define/public (get-alternative-position)
-;       (send (vector-ref positions (bitwise-and (+ current 1) 1)) get-id))
-;     (define/public (change-position)
-;       (set! current (bitwise-and (+ current 1) 1)))))
+;    (define (replace-track tracks to new-track)
+;      (map (lambda (t) (if (eq? (track-to t) to) new-track t)) tracks))
+;    (when (> 0 10)
+;    (let* ((tlen-e (send midpoint get-track-length entry))
+;           (tlen-1 (send midpoint get-track-length exit-1))
+;           (tlen-2 (send midpoint get-track-length exit-2))
+;           (tlen-e1 (+ tlen-e tlen-1))
+;           (tlen-e2 (+ tlen-e tlen-2)))
+;      (send entry set-tracks
+;            (cons (track entry exit-1 tlen-e1)
+;                  (replace-track (send entry get-tracks)
+;                                 exit-2
+;                                 (track entry exit-2 tlen-e2))))
+;      (send exit-1 set-tracks
+;            (replace-track (send exit-1 get-tracks)
+;                           entry
+;                           (track exit-1 entry tlen-e1)))
+;      (send exit-2 set-tracks
+;            (replace-track (send exit-2 get-tracks)
+;                           entry
+;                           (track exit-2 entry tlen-e2)))))
 
-
-(define (distance-between-nodes n1 n2)
+(define (point-distance n1 n2)
   (let ((x1 (send n1 get-x))
         (y1 (send n1 get-y))
         (x2 (send n2 get-x))
@@ -96,7 +119,7 @@
 
 
 (define (connect-nodes! n1 n2)
-  (let ((distance (distance-between-nodes n1 n2)))
+  (let ((distance (point-distance n1 n2)))
     (send n1 add-adjacent n2 distance)
     (send n2 add-adjacent n1 distance)))
 

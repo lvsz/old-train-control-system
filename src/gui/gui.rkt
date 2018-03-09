@@ -17,7 +17,7 @@
         (else x)))
 
 (define (sorted-switches)
-  (let ((switch-list (map symbol->string (set->list (get-switches)))))
+  (let ((switch-list (map symbol->string (hash-keys (get-switches)))))
     (map id->symbol (if (string->number (car switch-list))
                       (sort (map string->number switch-list) <)
                       (sort switch-list string<?)))))
@@ -116,12 +116,11 @@
 
 
 (define (draw-switches dc)
-  (set-for-each
-    (get-switches)
+  (for-each
     (lambda (id)
       (let* ((~id (~a id))
              (n1 (get-node id))
-             (n2 (get-node (get-switch-position id)))
+             (n2 (get-node (get-current-switch-position id)))
              (n3 (get-node (get-alternative-switch-position id)))
              (x1 (send n1 get-x))
              (y1 (send n1 get-y))
@@ -147,7 +146,8 @@
            ((bg-w)            (+ 6 (max txt-w txt-h)))
            ((bg-x bg-y)       (values (- x1 (/ bg-w 2)) (- y1 (/ bg-w 2)))))
           (send dc draw-ellipse bg-x bg-y bg-w bg-w)
-          (send dc draw-text ~id id-x id-y))))))
+          (send dc draw-text ~id id-x id-y))))
+    (hash-keys (get-switches))))
 
 (define (draw-loco dc loco)
   (let* ((p (new dc-path%))
@@ -220,10 +220,8 @@
   (define key-callback
     (lambda (key)
       (case key
-        ((up)
-         (inc))
-        ((down)
-         (dec)))))
+        ((up) (inc))
+        ((down) (dec)))))
   (define update-callback void)
   (define buffer-bmp (make-object bitmap% width height))
   (define buffer-bmp-dc (make-object bitmap-dc% buffer-bmp))

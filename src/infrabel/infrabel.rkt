@@ -16,13 +16,14 @@
          get-loco-position
          get-loco-detection-block
          get-switch
-         get-switch-position
+         get-current-switch-position
+         get-alternative-switch-position
          set-switch-position!
          change-switch-position!
          get-detection-block)
 
 (define infrabel-host "localhost")
-(define infrabel-port 10133)
+(define infrabel-port 10162)
 
 (define nodes (make-hash))
 (define switches (make-hash))
@@ -53,12 +54,26 @@
 (define (get-loco-detection-block id)
   (z21:get-loco-detection-block))
 
-(define (get-switch-position id)
+(define (get-current-switch-position id)
   ;(z21:get-switch-position id))
   (send (get-switch id) get-current-position))
 
+(define (get-alternative-switch-position id)
+  (send (get-switch id) get-alternative-position))
+
 (define (set-switch-position! id pos)
-  (z21:set-switch-position! id pos))
+  (let* ((node (get-node pos))
+         (switch (get-switch id))
+         (pos1 (send switch get-current-position))
+         (pos2 (send switch get-alternative-position)))
+    (unless (eq? node pos1)
+      (if (eq? node pos2)
+        (change-switch-position! id)
+        (raise-arguments-error 'set-switch-position
+                               (format "invalid position for node ~a" id)
+                               "given" pos
+                               "expected" `(or ,(send pos1 get-id)
+                                               ,(send pos2 get-id)))))))
 
 (define (change-switch-position! id)
   (if (= (z21:get-switch-position id) 1)
@@ -96,8 +111,10 @@
                 (s  (get-node id))
                 (n1 (get-node (string->symbol (list-ref input 2))))
                 (n2 (get-node (string->symbol (list-ref input 3))))
-                (n3 (get-node (string->symbol (list-ref input 4)))))
-           (hash-set! switches id (make-object switch% id s n2 n3))
+                (n3 (get-node (string->symbol (list-ref input 4))))
+                (switch (make-object switch% id n1 s n2 n3)))
+           (hash-set! switches id switch)
+           (send s set-switch switch)
            (connect-nodes! s n1)
            (connect-nodes! s n2)
            (connect-nodes! s n3)))
@@ -121,7 +138,6 @@
       (let ((db1 (z21:get-loco-detection-block lid))
             (db2 (send loco get-detection-block)))
         (unless (eq? db1 db2)
-          (displayln 'pushed-stufff)
           (unless (eq? db1 no-db)
             (send (get-detection-block db1) set-status 'red)
             (push-evt 'db-status db1 'red))
@@ -132,6 +148,4 @@
           (push-evt 'loco-db lid db1)))))
   (sleep 0.5)
   (run push-evt))
-
-
 

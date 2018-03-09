@@ -6,7 +6,7 @@
          set-loco-speed
          get-loco-position
          get-detection-block-status
-         get-switch-position
+         get-current-switch-position
          get-alternative-switch-position
          change-switch-position
          listen)
@@ -41,9 +41,9 @@
 (define (get-detection-block-status id)
   (send-and-receive-msg 'get-detection-block-status id))
 
-(define (get-switch-position id)
+(define (get-current-switch-position id)
   ;(printf "getting switch position for ~s~%" id)
-  (send-and-receive-msg 'get-switch-position id))
+  (send-and-receive-msg 'get-current-switch-position id))
 
 (define (get-alternative-switch-position id)
   ;(printf "getting alt switch position for ~s~%" id)

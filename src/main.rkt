@@ -5,7 +5,7 @@
          "gui/gui.rkt")
 
 (define border 30)
-;(define infrabel-command (new infrabel-command%))
+;(map (lambda (x) (send x get-id)) (calculate-route (get-node '|6|) (get-node '|26|)))
 
 (define (main (input "setup_loop.txt"))
   (read-railway input)
