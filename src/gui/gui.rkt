@@ -6,8 +6,19 @@
 
 (provide window%)
 
+(define loco-vector #f)
+(define loco-idx 0)
+(define active-loco #f)
 
-;(define frame #f)
+(define (loco-init)
+  (set! loco-vector (list->vector (hash-keys (get-locos))))
+  (set! active-loco (vector-ref loco-vector loco-idx)))
+
+(define (change-loco! i)
+  (set! loco-idx (modulo (+ loco-idx i) (vector-length loco-vector)))
+  (set! active-loco (vector-ref loco-vector loco-idx)))
+(define (next-loco!) (change-loco! 1))
+(define (prev-loco!) (change-loco! -1))
 
 (define (id->symbol x)
   (cond ((number? x)
@@ -199,29 +210,22 @@
       (set! elements (cons element elements))
       (redraw))))
 
-(define (inc)
-  (for-each
-    (lambda (x)
-      (let ((speed (get-loco-speed x)))
-        (set-loco-speed x (+ speed 0.5))))
-  (hash-keys (get-locos))))
-(define (dec)
-  (for-each
-    (lambda (x)
-      (let ((speed (get-loco-speed x)))
-        (set-loco-speed x (- speed 0.5))))
-  (hash-keys (get-locos))))
+(define (inc-speed!)
+  (set-loco-speed active-loco (+ (get-loco-speed active-loco) 0.5)))
+(define (dec-speed!)
+  (set-loco-speed active-loco (- (get-loco-speed active-loco) 0.5)))
 
-(define window% ; width height infrabel-command)
+(define window%
   (class object%
-    ;(window<%>)
     (super-new)
     (init-field width height)
   (define key-callback
     (lambda (key)
       (case key
-        ((up) (inc))
-        ((down) (dec)))))
+        ((up) (inc-speed!))
+        ((down) (dec-speed!))
+        ((left) (prev-loco!))
+        ((right) (next-loco!)))))
   (define update-callback void)
   (define buffer-bmp (make-object bitmap% width height))
   (define buffer-bmp-dc (make-object bitmap-dc% buffer-bmp))
@@ -292,6 +296,7 @@
   (send frame show #t)
   (send panel show #t)
   (send buffer-bmp-dc set-background (make-object color% "white"))
+  (loco-init)
   (launch-draw-loop)
   (send canvas focus)))
 
