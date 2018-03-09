@@ -160,9 +160,11 @@
     (hash-keys (get-switches))))
 
 (define (draw-loco dc loco)
-  (let* ((p (new dc-path%))
+  (let* ((id (send loco get-id))
+         (p (new dc-path%))
          (w 30)
          (h 10)
+         (color (if (eq? id active-loco) "yellow" "crimson"))
          (position (send loco get-position))
          (n1 (fst-node position))
          (n2 (snd-node position))
@@ -174,7 +176,7 @@
     (send dc set-pen
           (send the-pen-list find-or-create-pen "black" 1 'solid 'butt 'miter))
     (send dc set-brush
-          (send the-brush-list find-or-create-brush "crimson" 'solid))
+          (send the-brush-list find-or-create-brush color'solid))
     (send dc set-origin (/ (+ x1 x2) 2) (/ (+ y1 y2) 2))
     (send p rectangle (- (/ w 2)) (- (/ h 2)) w h)
     (send p rectangle (- (/ w 2)) (- (/ h 2)) (/ w 4) h)

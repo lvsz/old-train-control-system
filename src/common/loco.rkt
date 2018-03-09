@@ -9,6 +9,9 @@
     (super-new)
     (init-field id current-position)
 
+    (define/public (get-id)
+      id)
+
     (define speed 0)
     (define/public (get-speed)
       speed)
