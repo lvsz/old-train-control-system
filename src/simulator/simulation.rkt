@@ -33,7 +33,7 @@
   (when running?
     (error "Simulation is already running."))
   (set! running? #t)
-  (set! model (load-rwm "setup_loop.txt"))
+  (set! model (load-rwm "../input.txt"))
   (set! current-thread
         (thread simul-loop)))
 
@@ -70,6 +70,7 @@
         (define n3 (if forward?
                        (next-node n1 n2)
                        (next-node n2 n1)))
+        (displayln (list n1 n2 n3))
         (unless n3
           (error "loco derailed" (loco-id loco)))
         (check-collision (loco-id loco) (track n1 n2)
