@@ -4,7 +4,7 @@
 
 (provide get-loco-speed
          set-loco-speed!
-         get-loco-position
+         get-loco-track
          get-detection-block-status
          get-current-switch-position
          get-alternative-switch-position
@@ -36,8 +36,8 @@
 (define (set-loco-speed! id speed)
   (send-msg 'set-loco-speed id speed))
 
-(define (get-loco-position id)
-  (send-and-receive-msg 'get-loco-position id))
+(define (get-loco-track id)
+  (send-and-receive-msg 'get-loco-track id))
 
 ; (define (change-loco-position id position)
 ; (send-msg 'change-loco-position id position))

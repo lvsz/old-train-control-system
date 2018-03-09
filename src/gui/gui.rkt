@@ -88,7 +88,7 @@
 (define (draw-detection-blocks dc)
   (for-each
     (lambda (db)
-      (let* ((nodes (send db get-track))
+      (let* ((nodes (send db get-nodes))
              (n1 (fst-node nodes))
              (n2 (snd-node nodes))
              (color (case (send db get-status)
@@ -125,11 +125,37 @@
     (send dc set-origin 0 0)))
 
 
+(define (draw-node-label dc x y label)
+  (match-let*-values
+    (((label-string)    (~a label))
+     ((txt-w txt-h _ _) (send dc get-text-extent label-string))
+     ((id-x id-y)       (values (- x (/ txt-w 2)) (- y (/ txt-h 2))))
+     ((bg-w)            (+ 6 (max txt-w txt-h)))
+     ((bg-x bg-y)       (values (- x (/ bg-w 2)) (- y (/ bg-w 2)))))
+    (send dc draw-ellipse bg-x bg-y bg-w bg-w)
+    (send dc draw-text label-string id-x id-y)))
+
+(define (draw-node-labels dc)
+  (send dc set-pen
+        (send the-pen-list find-or-create-pen
+              "black" 1 'solid 'butt 'miter))
+  (send dc set-brush
+        (send the-brush-list find-or-create-brush
+              "white" 'solid))
+  (send dc set-font
+        (send the-font-list find-or-create-font
+              9 'swiss 'normal 'bold))
+  (hash-for-each
+    (get-nodes)
+    (lambda (k v)
+      (let ((x (send v get-x))
+            (y (send v get-y)))
+        (draw-node-label dc x y k)))))
+
 (define (draw-switches dc)
   (for-each
     (lambda (id)
-      (let* ((~id (~a id))
-             (n1 (get-node id))
+      (let* ((n1 (get-node id))
              (n2 (get-current-switch-position id))
              (n3 (get-alternative-switch-position id))
              (x1 (send n1 get-x))
@@ -150,13 +176,7 @@
         (send dc set-brush
               (send the-brush-list find-or-create-brush
                     "white" 'solid))
-        (match-let*-values
-          (((txt-w txt-h _ _) (send dc get-text-extent ~id))
-           ((id-x id-y)       (values (- x1 (/ txt-w 2)) (- y1 (/ txt-h 2))))
-           ((bg-w)            (+ 6 (max txt-w txt-h)))
-           ((bg-x bg-y)       (values (- x1 (/ bg-w 2)) (- y1 (/ bg-w 2)))))
-          (send dc draw-ellipse bg-x bg-y bg-w bg-w)
-          (send dc draw-text ~id id-x id-y))))
+        (draw-node-label dc x1 y1 id)))
     (hash-keys (get-switches))))
 
 (define (draw-loco dc loco)
@@ -165,9 +185,9 @@
          (w 30)
          (h 10)
          (color (if (eq? id active-loco) "yellow" "crimson"))
-         (position (send loco get-position))
-         (n1 (fst-node position))
-         (n2 (snd-node position))
+         (current-track (send loco get-current-track))
+         (n1 (track-from current-track))
+         (n2 (track-to current-track))
          (x1 (send n1 get-x))
          (y1 (send n1 get-y))
          (x2 (send n2 get-x))
@@ -237,8 +257,9 @@
   (define (paint-callback canvas dc)
     (send buffer-bmp-dc clear)
     (for-each (lambda (layer) (send layer draw buffer-bmp-dc)) layers)
-    (draw-switches buffer-bmp-dc)
     (draw-detection-blocks buffer-bmp-dc)
+    (draw-node-labels buffer-bmp-dc)
+    (draw-switches buffer-bmp-dc)
     (draw-locos buffer-bmp-dc)
     (send dc clear)
     (send dc draw-bitmap buffer-bmp 0 0))
@@ -300,24 +321,4 @@
   (loco-init)
   (launch-draw-loop)
   (send canvas focus)))
-
-;  (set! frame (new frame%
-;                   (label "Railway")
-;                   (width width)
-;                   (height (+ height 20)))) ; + 20 for titlebar
-;  (control-panel infrabel-command)
-;  (new canvas%
-;       (parent frame)
-;       (min-width width)
-;       (min-height height)
-;       (paint-callback
-;         (lambda (canvas dc)
-;           (send dc draw-bitmap (railway-bmp) 0 0)
-;           (draw-switches dc infrabel-command)
-;           (draw-locos dc infrabel-command))))
-;  (send frame show #t))
-
-
-;(define (draw-window)
-;  (send frame show #t))
 

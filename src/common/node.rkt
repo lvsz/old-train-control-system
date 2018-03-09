@@ -12,7 +12,8 @@
          track-length
          point-distance
          nodes-slope
-         connect-nodes!)
+         connect-nodes!
+         next-node)
 
 (struct track (from to length))
 
@@ -38,20 +39,20 @@
       (map track-to adjacent))
     (define/public (add-adjacent node distance)
       (set! adjacent (cons (track this node distance) adjacent)))
-    (define/public (get-track-length node)
-      (display "tracklength: ")
-      (display (send node get-id)) (display "::")
-      (displayln (get-adjacent))
-      (let loop ((ts adjacent))
-        (cond ((null? ts)
-               #f)
-              ((eq? node (track-to (car ts)))
-               (track-length (car ts)))
-              (else (loop (cdr ts))))))
     (define/public (get-tracks)
       adjacent)
-    (define/public (set-tracks tracks)
-      (set! adjacent tracks))
+    (define/public (get-track-to node)
+      (let loop ((tracks adjacent))
+        (cond ((null? tracks)
+               #f)
+              ((eq? node (track-to (car tracks)))
+               (car tracks))
+              (else (loop (cdr tracks))))))
+    (define/public (get-track-length node)
+      (let ((t (get-track-to node)))
+        (if t
+          (track-length t)
+          #f)))
 
     (define switch #f)
     (define/public (get-switch)
@@ -61,11 +62,15 @@
 
     (define detection-blocks '())
     (define/public (detection-block?)
-      (not (null? detection-blocks)))
+      (pair? detection-blocks))
     (define/public (get-detection-blocks)
       detection-blocks)
     (define/public (add-detection-block id)
-      (set! detection-blocks (cons id detection-blocks)))))
+      (set! detection-blocks (cons id detection-blocks))
+      (when (pair? (cdr detection-blocks))
+        (for-each (lambda (db)
+                    (send db set-connecting (remq db detection-blocks)))
+        detection-blocks)))))
 
 (define switch%
   (class object%
@@ -135,4 +140,18 @@
             +inf.0)
           (else
             -inf.0))))
+
+(define (next-node from to)
+  (let ((adjacent (remq from (send to get-adjacent))))
+    (cond ((null? adjacent)
+           #f)
+          ((null? (cdr adjacent))
+           (car adjacent))
+          (else (let ((switch (send to get-switch)))
+                  (cond ((eq? (send switch get-entry-node) from)
+                         (send switch get-current-position))
+                        ((eq? (send switch get-current-position) from)
+                         (send switch get-entry-node))
+                        (else #f)))))))
+
 

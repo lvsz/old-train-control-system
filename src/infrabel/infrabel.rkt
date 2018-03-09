@@ -13,7 +13,7 @@
          get-loco
          get-loco-speed
          set-loco-speed!
-         get-loco-position
+         get-loco-track
          get-loco-detection-block
          get-switch
          get-current-switch-position
@@ -23,14 +23,12 @@
          get-detection-block)
 
 (define infrabel-host "localhost")
-(define infrabel-port 10162)
+(define infrabel-port 10171)
 
 (define nodes (make-hash))
 (define switches (make-hash))
 (define detection-blocks (make-hash))
 (define locos (make-hash))
-
-(define no-db #f) ;'|-1|)
 
 (define (get-node id)
   (hash-ref nodes id))
@@ -41,14 +39,13 @@
 (define (get-loco id)
   (hash-ref locos id))
 
-(define (get-loco-position id)
-  (send (hash-ref locos id) get-position))
+(define (get-loco-track id)
+  (send (hash-ref locos id) get-current-track))
 
 (define (get-loco-speed id)
   (z21:get-loco-speed id))
 
 (define (set-loco-speed! id speed)
-  (printf "setting speed to ~a~%" speed)
   (z21:set-loco-speed! id speed))
 
 (define (get-loco-detection-block id)
@@ -82,7 +79,7 @@
   (send (get-switch id) change-position))
 
 (define (get-detection-block id)
-  (hash-ref detection-blocks id))
+  (hash-ref detection-blocks id (lambda () no-db)))
 
 (define (infrabel-init file)
   (let ((file (open-input-file file #:mode 'text)))
@@ -94,13 +91,14 @@
                (y (string->number (list-ref input 3))))
            (hash-set! nodes id (make-object node% id x y))))
         ((D)
-         (let ((id (string->symbol (list-ref input 1)))
-               (n1 (get-node (string->symbol (list-ref input 2))))
-               (n2 (get-node (string->symbol (list-ref input 3)))))
-           (hash-set! detection-blocks id
-                      (make-object detection-block% id (node-pair n1 n2)))
-           (send n1 add-detection-block id)
-           (send n2 add-detection-block id)
+         (let* ((id (string->symbol (list-ref input 1)))
+                (n1 (get-node (string->symbol (list-ref input 2))))
+                (n2 (get-node (string->symbol (list-ref input 3))))
+                (detection-block
+                  (make-object detection-block% id (node-pair n1 n2))))
+           (hash-set! detection-blocks id detection-block)
+           (send n1 add-detection-block detection-block)
+           (send n2 add-detection-block detection-block)
            (connect-nodes! n1 n2)))
         ((T)
          (let ((n1 (get-node (string->symbol (list-ref input 1))))
@@ -122,30 +120,36 @@
          (let* ((id (string->symbol (list-ref input 1)))
                 (n1 (get-node (string->symbol (list-ref input 2))))
                 (n2 (get-node (string->symbol (list-ref input 3))))
-                (loco (make-object loco% id (node-pair n1 n2)))
+                (loco (make-object loco% id (send n1 get-track-to n2)))
                 (db (set-intersect (send n1 get-detection-blocks)
                                    (send n2 get-detection-blocks))))
            (hash-set! locos id loco)
            (if (null? db)
-             (send loco set-detection-block '|-1|)
-             (send loco set-detection-block (car db))))))))
+             (send loco set-detection-block no-db)
+             (begin (send loco set-detection-block (car db))
+                    (send (car db) set-status 'red loco))))))))
   (z21:start-simulator file))
 
 (define (run push-evt)
   (hash-for-each
     locos
     (lambda (lid loco)
-      (let ((db1 (z21:get-loco-detection-block lid))
-            (db2 (send loco get-detection-block)))
-        (unless (eq? db1 db2)
-          (unless (eq? db1 no-db)
-            (send (get-detection-block db1) set-status 'red)
-            (push-evt 'db-status db1 'red))
-          (unless (eq? db2 no-db)
-            (send (get-detection-block db2) set-status 'green)
-            (push-evt 'db-status db2 'green))
+      (let* ((dbid1 (z21:get-loco-detection-block lid))
+             (db1 (get-detection-block dbid1))
+             (db2 (send loco get-detection-block))
+             (dbid2 (if (eq? db2 no-db) no-db (send db2 get-id))))
+        (when (and (not (eq? db2 no-db))
+                   (not (eq? (send db2 get-status) 'red)))
+          (send db2 set-status 'red loco))
+        (unless (eq? dbid1 dbid2)
+          (unless (eq? dbid1 no-db)
+            (send db1 set-status 'red)
+            (push-evt 'db-status dbid1 'red lid))
+          (unless (or (eq? dbid2 no-db) (not (eq? dbid1 no-db)))
+            (send db2 set-status 'green)
+            (push-evt 'db-status dbid2 'green #f))
           (send loco set-detection-block db1)
-          (push-evt 'loco-db lid db1)))))
-  (sleep 0.5)
+          (push-evt 'loco-db lid dbid1)))))
+  (sleep 0.1)
   (run push-evt))
 
