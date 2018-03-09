@@ -4,7 +4,7 @@
          "../common/node.rkt"
          "../common/loco.rkt"
          "../common/detection-block.rkt"
-         "../infrabel/command.rkt")
+         (prefix-in remote: "../infrabel/command.rkt"))
 
 (provide read-railway
          run-nmbs
@@ -17,6 +17,13 @@
          get-detection-blocks
          get-railway-width
          get-railway-height
+         get-loco-speed
+         set-loco-speed!
+         get-loco-position
+         get-detection-block-status
+         get-current-switch-position
+         get-alternative-switch-position
+         change-switch-position!
          calculate-route)
 
 
@@ -49,6 +56,29 @@
 
 (define (get-detection-blocks)
   detection-blocks)
+
+(define (get-loco-speed id)
+  (send (get-loco id) get-speed))
+
+(define (set-loco-speed! id speed)
+  (remote:set-loco-speed! id speed)
+  (send (get-loco id) set-speed speed))
+
+(define (get-loco-position id)
+  (send (get-loco id) get-loco-position))
+
+(define (get-detection-block-status id)
+  (send (get-detection-block id) get-status))
+
+(define (get-current-switch-position id)
+  (send (get-switch id) get-current-position))
+
+(define (get-alternative-switch-position id)
+  (send (get-switch id) get-alternative-position))
+
+(define (change-switch-position! id)
+  (remote:change-switch-position! id)
+  (send (get-switch id) change-position))
 
 (define min-x +inf.0)
 (define max-x -inf.0)
@@ -131,7 +161,7 @@
                    (send (get-loco lid) set-position track))))))))))
   (thread (lambda ()
             (let loop ()
-              (listen (nmbs-thread))
+              (remote:listen (nmbs-thread))
               (loop)))))
 
 (define (hash-key-of-min-value h)
@@ -205,42 +235,5 @@
               (send current get-tracks))
             (unless (or (set-empty? open) (> i 10000))
               (while (+ i 1)))))))))
-
-;  (let ((open (make-ordered-hash (lambda (x y) (<= (cdr x) (cdr y)))
-;                                 (cons start (point-distance start end))))
-;        (closed (mutable-seteq))
-;        (came-from (make-hash))
-;        (gscores (make-hash (cons start 0)))
-;        (gscore-ref (lambda (k) (hash-ref gscores k (lambda () +inf.0)))))
-;  (let loop ()
-;    (when (not (ordered-hash-empty? open))
-;      (let* ((current (ordered-hash-min open))
-;             (node (car current))
-;             (fscore (cdr current)))
-;        (if (eq? (car current) end)
-;          (make-path came-from current)
-;          (begin
-;            (ordered-hash-remove-min! open)
-;            (set-add! closed 
-;              ((set-member? (car current) closed)
-;               (sorted-set-remove! 
-;          (begin
-;            (sorted-set-remove-min! open)
-;            (
-;            (set-add! closed (car current))
-;            (let while ((next (send (car current) get-adjacent)))
-;              (unless (null? next)
-;                (when (set-member? closed (car next))
-;                  (while (cdr next)))
-;                (let* ((node (car next))
-;                       (gscore (hash-ref gscores node (lambda () +inf.0)))
-;                       (tent-gscore (+ gscore (point-distance node end))))
-;                  (sorted-set-add! open (cons node fscore)))
-;                  (when (>= (+ (hash-ref gscores current)
-;                               (point-distance (car current) node))
-;                            (hash-ref gscores node (lambda () +inf.0)))
-;                    (while (cdr next)))
-;                  (
-
 
 

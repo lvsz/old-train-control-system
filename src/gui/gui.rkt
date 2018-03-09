@@ -1,8 +1,7 @@
 #lang racket/gui
 
 (require "../nmbs/nmbs.rkt"
-         "../common/node.rkt"
-         "../infrabel/command.rkt")
+         "../common/node.rkt")
 
 (provide window%)
 
@@ -49,7 +48,7 @@
                                      10 'swiss 'normal 'light))
                          (callback
                            (lambda (b e)
-                             (change-switch-position id)))))))
+                             (change-switch-position! id)))))))
     panel))
 
 (define (draw-node node dc (node-radius 2))
@@ -131,8 +130,8 @@
     (lambda (id)
       (let* ((~id (~a id))
              (n1 (get-node id))
-             (n2 (get-node (get-current-switch-position id)))
-             (n3 (get-node (get-alternative-switch-position id)))
+             (n2 (get-current-switch-position id))
+             (n3 (get-alternative-switch-position id))
              (x1 (send n1 get-x))
              (y1 (send n1 get-y))
              (x2 (send n2 get-x))
@@ -211,9 +210,9 @@
       (redraw))))
 
 (define (inc-speed!)
-  (set-loco-speed active-loco (+ (get-loco-speed active-loco) 0.5)))
+  (set-loco-speed! active-loco (+ (get-loco-speed active-loco) 0.5)))
 (define (dec-speed!)
-  (set-loco-speed active-loco (- (get-loco-speed active-loco) 0.5)))
+  (set-loco-speed! active-loco (- (get-loco-speed active-loco) 0.5)))
 
 (define window%
   (class object%

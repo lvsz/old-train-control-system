@@ -1,7 +1,6 @@
 #lang racket
 
 (require "nmbs/nmbs.rkt"
-         "infrabel/command.rkt"
          "gui/gui.rkt")
 
 (define border 30)
