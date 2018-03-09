@@ -4,7 +4,7 @@
          "../common/node.rkt"
          "../common/loco.rkt"
          "../common/detection-block.rkt"
-         (prefix-in remote: "../infrabel/command.rkt"))
+         (prefix-in remote: "../infrabel/client.rkt"))
 
 (provide read-railway
          run-nmbs
